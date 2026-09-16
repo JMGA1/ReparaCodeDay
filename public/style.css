@@ -61,3 +61,110 @@ dialog[open] #modal-content{display:flex;flex-direction:column;min-height:0;max-
 dialog[open] .modal-head{flex:0 0 auto}
 dialog[open] .modal-body{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 @media(max-width:720px){dialog[open]{max-height:94dvh}dialog[open] #modal-content{max-height:94dvh}}
+
+
+/* v11.7 — identidad frontera Rivera/Livramento */
+:root{--paper:#efeae0;--ink:#23241f;--rivera:#c1672b;--livramento:#2c5f8a;--line:#d7d0c3;--muted:#675f55;--panel:#f8f4ed;--soft:#f3eee5;--shadow:0 18px 42px rgba(35,36,31,.08);--border:var(--line);--accent:var(--rivera);font-family:"Public Sans",Arial,sans-serif;color:var(--ink);background:var(--paper)}
+html,body{background:var(--paper);color:var(--ink)}
+body,button,input,select,textarea{font-family:"Public Sans",Arial,sans-serif;color:var(--ink)}
+h1,h2,h3,.brand strong{font-family:"Public Sans",Arial,sans-serif}
+.mono,.code-box strong,.incident-code,.coords{font-family:"JetBrains Mono",monospace;letter-spacing:.02em}
+header{position:sticky;top:0;z-index:40;height:auto;padding:18px 4%;background:rgba(239,234,224,.94);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.brand{color:var(--ink);font-size:28px;letter-spacing:-.04em}
+nav{height:auto;align-items:center}nav button{padding:12px 0;color:var(--muted)}nav button.active{color:var(--ink);border-color:var(--ink)}
+.demo-banner{padding:10px 4%;background:#e7dfd2;color:var(--muted);border-bottom:1px solid var(--line)}
+main{max-width:1320px;padding:28px 4% 34px}.page-heading{align-items:end;margin-bottom:18px}.page-heading .eyebrow{display:none}.heading-meta{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}.sub{max-width:60ch;color:var(--muted)}
+.city-badge{display:inline-flex;align-items:center;gap:6px;padding:7px 11px;border-radius:999px;font-size:12px;font-weight:700;letter-spacing:.02em;border:1px solid transparent}.city-badge.rivera{background:rgba(193,103,43,.11);border-color:rgba(193,103,43,.28);color:var(--rivera)}.city-badge.livramento{background:rgba(44,95,138,.10);border-color:rgba(44,95,138,.26);color:var(--livramento)}
+.primary{background:var(--ink);color:var(--paper);border-radius:999px;padding:13px 18px;box-shadow:none}.primary:hover{background:#111}.secondary{border:1px solid var(--line);border-radius:999px;padding:10px 15px;background:var(--panel)}
+.citizen-hero{grid-template-columns:minmax(0,1.5fr) minmax(260px,.8fr);padding:26px 28px;border-radius:26px;background:linear-gradient(90deg,rgba(193,103,43,.08) 0 49.8%,rgba(44,95,138,.08) 50.2% 100%),var(--panel);color:var(--ink);box-shadow:var(--shadow);border:1px solid var(--line)}
+.citizen-hero:before{content:"";position:absolute;top:18px;bottom:18px;left:50%;width:2px;background:linear-gradient(to bottom,rgba(193,103,43,.5),rgba(44,95,138,.5));transform:translateX(-50%)}
+.citizen-hero:after,.hero-kicker{display:none!important}.citizen-hero h2{font-size:clamp(2rem,4vw,3rem);max-width:14ch;margin:0 0 12px}.citizen-hero-copy>p:not(.hero-kicker){color:var(--muted);font-size:1rem;max-width:55ch}.hero-actions{margin-top:18px}.hero-actions .secondary{background:#fff}
+.hero-steps{list-style:none;margin:0;padding:8px 0 8px 26px;display:flex;flex-direction:column;justify-content:center;gap:14px}.hero-steps li{display:flex;align-items:center;gap:12px;font-weight:700;padding:0;background:none;border:0}.hero-steps span{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;font-weight:800;background:#fff;border:1px solid var(--line)}.hero-steps strong{font-size:1rem}
+.stats-shell{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:16px;margin:0 0 24px}.stats-primary,.stat-mini{background:var(--panel);border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow)}.stats-primary{padding:24px 28px;display:flex;flex-direction:column;justify-content:center;min-height:180px}.stats-primary p{margin:0 0 6px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-size:.8rem}.stats-primary strong{font-size:clamp(3rem,8vw,5rem);line-height:.9;letter-spacing:-.05em}.stats-primary small{margin-top:10px;color:var(--muted);font-size:.95rem}.stats-secondary{display:grid;gap:12px}.stat-mini{padding:18px 20px}.stat-mini span{display:block;font-size:.83rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}.stat-mini strong{display:block;font-size:2rem;letter-spacing:-.04em;margin:4px 0}.stat-mini small{color:var(--muted)}
+.filters{margin-bottom:18px}.panel{border:1px solid var(--line);background:var(--panel);border-radius:24px;box-shadow:var(--shadow)}.panel-heading{padding:18px 22px;border-bottom:1px solid var(--line)}.panel-heading span{color:var(--muted)}
+.map-toolbar button{padding:10px 12px;background:#fff;border:1px solid var(--line);border-radius:999px}.map-toolbar #rivera{color:var(--rivera);border-color:rgba(193,103,43,.3)}.map-toolbar #livramento{color:var(--livramento);border-color:rgba(44,95,138,.3)}
+.map.real-map,.expanded-map,.picker-map{background:#ddd5c8}.map-preview-wrap{padding:10px}.map-explore-button{bottom:28px}.marker-icon{background:transparent;border:0}.map-pin{display:grid;place-items:center;width:34px;height:34px;color:#fff;border:3px solid #fff;border-radius:50% 50% 50% 4px;box-shadow:0 10px 20px rgba(35,36,31,.18);font-weight:800}.map-pin.rivera{background:var(--rivera)}.map-pin.livramento{background:var(--livramento)}
+.incident{padding:20px 22px;background:transparent}.incident:hover{background:rgba(255,255,255,.45)}.incident-top{align-items:center}.incident-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--muted)}.incident h3{font-size:1rem;margin:10px 0 6px}.incident p{margin:0 0 10px;color:var(--muted)}.city-caption{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:12px;color:var(--muted);margin-bottom:12px}.incident-code{font-size:12px}.badge{background:#ece3d1;color:#7a5930}.badge.resuelto{background:#e7efe8;color:#406449}.badge.en-proceso{background:#e8edf2;color:#355978}.badge.en-revision{background:#eee9f3;color:#645173}.demo-tag{font-size:11px;padding:5px 8px;border-radius:999px;background:#eee4d7;color:#7b6551}
+.opportunity-card,.community-ai-card,.ai-card,.moderation-card,.admin-photo-block,.report-classification,.notification-card,.simple-report-intro{background:var(--panel);border-color:var(--line)}.community-chip{background:rgba(193,103,43,.12);color:var(--rivera)}
+.table-wrap table small,.detail-actions,.history small{color:var(--muted)}.text-button{color:var(--ink)}input,select,textarea{border:1px solid var(--line);border-radius:14px;padding:12px 13px;background:#fff;color:var(--ink)}dialog{background:var(--panel);color:var(--ink);border:1px solid var(--line)}dialog::backdrop{background:rgba(35,36,31,.45)}
+#toast{background:var(--ink);color:var(--paper)}
+:root[data-theme="dark"]{--paper:#191917;--ink:#efeae0;--panel:#24231f;--soft:#2b2924;--line:#3a372f;--muted:#c2b9ab}:root[data-theme="dark"] html,:root[data-theme="dark"] body{background:var(--paper);color:var(--ink)}:root[data-theme="dark"] header{background:rgba(25,25,23,.94)}:root[data-theme="dark"] .demo-banner{background:#22211d}:root[data-theme="dark"] .panel,:root[data-theme="dark"] .stats-primary,:root[data-theme="dark"] .stat-mini,:root[data-theme="dark"] .citizen-hero,:root[data-theme="dark"] dialog,:root[data-theme="dark"] .secondary,:root[data-theme="dark"] .map-toolbar button,:root[data-theme="dark"] .opportunity-card,:root[data-theme="dark"] .community-ai-card,:root[data-theme="dark"] .ai-card,:root[data-theme="dark"] .moderation-card{background:var(--panel)}:root[data-theme="dark"] input,:root[data-theme="dark"] select,:root[data-theme="dark"] textarea{background:#161513;color:var(--ink)}:root[data-theme="dark"] .hero-actions .secondary{background:#1a1917}:root[data-theme="dark"] .map.real-map,:root[data-theme="dark"] .expanded-map,:root[data-theme="dark"] .picker-map{background:#2b2924}
+@media(max-width:820px){main{padding:22px 4% 28px}.page-heading{align-items:flex-start}.citizen-hero{grid-template-columns:1fr;padding:22px}.citizen-hero:before{left:20px;right:20px;top:auto;bottom:auto;width:auto;height:2px;transform:none;background:linear-gradient(90deg,rgba(193,103,43,.5),rgba(44,95,138,.5));position:relative;display:block;order:2;margin:6px 0 2px}.hero-steps{padding:8px 0 0 0;display:grid;grid-template-columns:1fr;gap:10px}.stats-shell{grid-template-columns:1fr}.map-layout{grid-template-columns:1fr}}
+
+/* v11.8 — panel privado alineado con la identidad Rivera / Livramento */
+body[data-admin-city="rivera"]{--admin-accent:var(--rivera);--admin-accent-rgb:193,103,43}
+body[data-admin-city="livramento"]{--admin-accent:var(--livramento);--admin-accent-rgb:44,95,138}
+.page-heading-admin{position:relative;padding:20px 22px 20px 26px;border:1px solid var(--line);border-radius:24px;background:var(--panel);box-shadow:var(--shadow);overflow:hidden;margin-bottom:18px}
+.page-heading-admin:before{content:"";position:absolute;inset:0 auto 0 0;width:5px;background:var(--admin-accent,var(--ink))}
+.page-heading-admin h1{font-size:clamp(1.9rem,3vw,2.7rem);margin-bottom:6px}
+.page-heading-admin .heading-actions{display:flex;gap:9px;flex-wrap:wrap;justify-content:flex-end}
+.page-heading-admin .heading-actions .secondary:last-child{border-color:rgba(var(--admin-accent-rgb,35,36,31),.24)}
+
+.admin-work-queue,.admin-reports{margin-top:26px}
+.admin-section-title{display:flex;align-items:flex-end;justify-content:space-between;gap:22px;margin:0 0 14px;padding:0 2px}
+.admin-section-title>div:first-child{position:relative;padding-left:46px}
+.admin-section-index{position:absolute;left:0;top:3px;color:var(--admin-accent,var(--muted));font-size:.78rem;font-weight:700}
+.admin-section-title h2{margin:0 0 4px;font-size:1.4rem;letter-spacing:-.03em}
+.admin-section-title .sub{font-size:.9rem}
+.admin-live{display:inline-flex;align-items:center;gap:8px;padding:8px 11px;border:1px solid var(--line);border-radius:999px;background:var(--panel);font-size:.76rem;color:var(--muted);white-space:nowrap}
+.admin-live span{width:8px;height:8px;border-radius:50%;background:var(--admin-accent,var(--ink));box-shadow:0 0 0 4px rgba(var(--admin-accent-rgb,35,36,31),.10)}
+
+.admin-incidents-panel{overflow:hidden;border-radius:20px}
+.admin-incidents-panel table{white-space:normal}
+.admin-incidents-panel thead th{padding:13px 18px;background:color-mix(in srgb,var(--admin-accent,var(--ink)) 5%,var(--panel));border-bottom:1px solid var(--line);color:var(--muted);font-size:.7rem;letter-spacing:.08em}
+.admin-incidents-panel tbody tr{transition:background .15s ease}
+.admin-incidents-panel tbody tr:hover{background:color-mix(in srgb,var(--admin-accent,var(--ink)) 4%,transparent)}
+.admin-incidents-panel td{padding:17px 18px;vertical-align:middle}
+.admin-incident-title{display:flex;align-items:flex-start;gap:12px;min-width:260px}
+.admin-city-dot{flex:0 0 auto;width:9px;height:9px;margin-top:6px;border-radius:50%;background:var(--admin-accent,var(--ink));box-shadow:0 0 0 4px rgba(var(--admin-accent-rgb,35,36,31),.10)}
+.admin-incident-title strong{font-size:.95rem;line-height:1.35;margin-bottom:5px}
+.admin-incident-title small{display:block;color:var(--muted)}
+.manage-link{display:inline-flex;align-items:center;gap:6px;font-weight:700;text-decoration:none;padding:8px 0;color:var(--admin-accent,var(--ink))}
+.manage-link:hover{text-decoration:underline}
+.admin-queue-footer{display:flex;justify-content:flex-end;margin:12px 0 0}
+
+body[data-admin-city] .stats-shell{margin-top:18px}
+body[data-admin-city] .stats-primary{position:relative;overflow:hidden}
+body[data-admin-city] .stats-primary:after{content:"";position:absolute;right:-38px;bottom:-55px;width:160px;height:160px;border-radius:50%;background:rgba(var(--admin-accent-rgb),.08)}
+body[data-admin-city] .stats-primary strong{color:var(--admin-accent)}
+body[data-admin-city] .stat-mini{border-top:3px solid color-mix(in srgb,var(--admin-accent) 46%,transparent)}
+
+.admin-reports{padding-top:28px;border-top:1px solid var(--line)}
+.report-filters{padding:15px;border:1px solid var(--line);border-radius:18px;background:var(--panel);align-items:end}
+.report-filters label{font-size:.76rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.report-filters input,.report-filters select{text-transform:none;letter-spacing:0}
+.report-panel{overflow:hidden}
+.report-panel .panel-heading{background:color-mix(in srgb,var(--admin-accent,var(--ink)) 4%,var(--panel))}
+.report-panel .chart{padding:22px}
+body[data-admin-city] .bar-track{height:10px;border-radius:999px;background:color-mix(in srgb,var(--admin-accent) 8%,var(--soft))}
+body[data-admin-city] .bar-fill{background:var(--admin-accent);border-radius:999px}
+.report-summary .report-output{font-size:.98rem;max-width:80ch}
+
+body[data-admin-city] dialog{border-top:4px solid var(--admin-accent)}
+body[data-admin-city] .modal-head{background:color-mix(in srgb,var(--admin-accent) 4%,var(--panel))}
+body[data-admin-city] .incident-location{border-color:rgba(var(--admin-accent-rgb),.24);background:rgba(var(--admin-accent-rgb),.035)}
+body[data-admin-city] .admin-photo-block{border-top:3px solid var(--admin-accent)}
+body[data-admin-city] .ai-card{border-left:4px solid var(--admin-accent);background:color-mix(in srgb,var(--admin-accent) 5%,var(--panel))}
+body[data-admin-city] .community-ai-card{border-left:4px solid color-mix(in srgb,var(--admin-accent) 70%,#6f8c4b)}
+body[data-admin-city] .moderation-card{border-left:4px solid var(--admin-accent);background:color-mix(in srgb,var(--admin-accent) 6%,var(--panel))}
+body[data-admin-city] #manage .primary,body[data-admin-city] #approve-incident{background:var(--admin-accent);color:#fff}
+body[data-admin-city] #manage .primary:hover,body[data-admin-city] #approve-incident:hover{filter:brightness(.92)}
+
+.auth-shell{min-height:min(640px,72vh);display:grid;grid-template-columns:minmax(0,1.05fr) minmax(330px,.75fr);border:1px solid var(--line);border-radius:28px;background:var(--panel);box-shadow:var(--shadow);overflow:hidden}
+.auth-context{padding:clamp(32px,6vw,72px);display:flex;flex-direction:column;justify-content:center;background:linear-gradient(135deg,rgba(193,103,43,.10),rgba(44,95,138,.10));position:relative}
+.auth-context:after{content:"";position:absolute;top:0;bottom:0;left:50%;width:2px;background:linear-gradient(var(--rivera),var(--livramento));opacity:.45}
+.auth-context>span{font-size:.75rem;color:var(--muted);margin-bottom:18px}.auth-context h2{max-width:12ch;font-size:clamp(2rem,4vw,3.2rem);line-height:1;letter-spacing:-.05em;margin:0 0 18px}.auth-context p{max-width:46ch;color:var(--muted)}
+.auth-border-line{display:flex;width:160px;height:6px;margin-top:26px;border-radius:999px;overflow:hidden}.auth-border-line i{flex:1}.auth-border-line i:first-child{background:var(--rivera)}.auth-border-line i:last-child{background:var(--livramento)}
+.auth-panel{border:0;border-radius:0;box-shadow:none;padding:clamp(28px,5vw,58px);display:flex;flex-direction:column;justify-content:center}.auth-panel h2{font-size:1.7rem;margin:0 0 8px}.auth-panel form{display:grid;gap:16px;margin-top:22px}.auth-panel .modal-actions{margin-top:4px}.auth-panel .primary{width:100%}
+
+:root[data-theme="dark"] .page-heading-admin,:root[data-theme="dark"] .report-filters,:root[data-theme="dark"] .auth-shell{background:var(--panel)}
+:root[data-theme="dark"] .auth-context{background:linear-gradient(135deg,rgba(193,103,43,.12),rgba(44,95,138,.12))}
+
+@media(max-width:820px){
+ .page-heading-admin{align-items:flex-start}.page-heading-admin .heading-actions{justify-content:flex-start}
+ .admin-section-title{align-items:flex-start;flex-direction:column}.admin-live{align-self:flex-start}
+ .admin-incidents-panel{border-radius:18px}.admin-incidents-panel table{min-width:760px}
+ .report-filters{display:grid;grid-template-columns:1fr 1fr}.report-filters label:nth-child(3),.report-filters button{grid-column:1/-1}
+ .auth-shell{grid-template-columns:1fr;min-height:0}.auth-context{padding:30px 24px}.auth-context:after{top:auto;left:24px;right:24px;bottom:0;width:auto;height:2px;background:linear-gradient(90deg,var(--rivera),var(--livramento))}.auth-context h2{font-size:2.2rem}.auth-panel{padding:30px 24px}
+}
+@media(max-width:520px){.report-filters{grid-template-columns:1fr}.report-filters label,.report-filters label:nth-child(3),.report-filters button{grid-column:auto}.admin-section-title>div:first-child{padding-left:38px}.admin-section-index{font-size:.7rem}}
