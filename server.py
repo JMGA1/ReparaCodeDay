@@ -407,7 +407,9 @@ class Handler(SimpleHTTPRequestHandler):
             return self.send_json({'error':'possible_duplicate','message':'Encontramos una incidencia que podría ser el mismo problema.','duplicate':duplicate,'analysis':analysis},409)
         category=analysis['category']; title=text(analysis['title'],90); summary=text(analysis['summary'],320,False); priority=analysis['priority']; reason=text(analysis['priority_reason'],320,False)
         with connection() as con:
-            con.execute('BEGIN IMMEDIATE'); old=con.execute('SELECT id,public_code FROM incidents WHERE request_id=?',(rid,)).fetchone()
+            if not USE_POSTGRES:
+                con.execute('BEGIN IMMEDIATE')
+            old=con.execute('SELECT id,public_code FROM incidents WHERE request_id=?',(rid,)).fetchone()
             if old:return self.send_json({'id':old['id'],'code':old['public_code']},200)
             params=(rid,title,category,city,address,description,lat,lng,now(),photo,summary,priority,reason,analysis['source'],analysis.get('duplicate_id') if body.get('force_new') else None)
             if USE_POSTGRES:
