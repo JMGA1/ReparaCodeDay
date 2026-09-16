@@ -1,0 +1,7 @@
+*
+!Dockerfile
+!requirements.txt
+!server.py
+!admin.py
+!public/
+!public/**

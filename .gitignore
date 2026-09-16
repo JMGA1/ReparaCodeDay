@@ -1,0 +1,9 @@
+data/
+.env
+__pycache__/
+*.pyc
+*.crt
+*.tar
+
+# Certificados HTTPS locales
+caddy-data/

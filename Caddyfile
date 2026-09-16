@@ -1,0 +1,7 @@
+{
+    auto_https disable_redirects
+}
+https://{$LAN_IP}:443 {
+    tls internal
+    reverse_proxy web:8080
+}
