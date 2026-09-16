@@ -10,7 +10,7 @@ services:
           name: repara-db
           property: connectionString
       - key: DEMO_MODE
-        value: "1"
+        value: "0"
       - key: DEMO_ADMIN_PASSWORD
         sync: false
 

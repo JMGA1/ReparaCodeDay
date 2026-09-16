@@ -38,3 +38,14 @@ dialog.map-dialog .modal-body{padding:16px}
 .expanded-map-help{margin:0 0 12px}
 @media(max-width:720px){.map-explore-button{bottom:14px;min-height:46px}.expanded-map{height:68dvh;min-height:360px}dialog.map-dialog{width:96vw;max-height:96dvh}dialog.map-dialog .modal-head{padding:14px 16px}dialog.map-dialog .modal-body{padding:12px}}
 :root[data-theme="dark"] .expanded-map{background:#26332d}
+
+/* v10.8 · IA + voluntariado */
+.ai-suggestion-row{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+.compact-btn{padding:8px 12px;white-space:nowrap}
+.community-ai-card{margin-top:14px;padding:16px;border:1px solid color-mix(in srgb,var(--accent) 36%,var(--border));border-radius:16px;background:color-mix(in srgb,var(--accent) 7%,var(--panel));}
+.community-ai-card h3{margin:4px 0 8px}.community-ai-card p{margin:7px 0}.community-active{display:inline-block;margin-top:8px;padding:7px 10px;border-radius:999px;background:color-mix(in srgb,var(--accent) 14%,transparent);font-weight:700}
+.community-opportunities{margin:20px 0 24px}.community-opportunity-title{margin-bottom:12px}.opportunity-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}.opportunity-card{padding:18px;border:1px solid var(--border);border-radius:18px;background:var(--panel);box-shadow:var(--shadow)}.opportunity-card h3{margin:10px 0 8px}.opportunity-card p{line-height:1.5}.opportunity-top{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:.86rem}.community-chip{display:inline-flex;padding:6px 9px;border-radius:999px;background:color-mix(in srgb,var(--accent) 12%,transparent);font-weight:700}.opportunity-card button{margin-top:8px}
+@media(max-width:640px){.ai-suggestion-row{align-items:stretch;flex-direction:column}.compact-btn{width:100%}.opportunity-grid{grid-template-columns:1fr}}
+
+.pagination{display:flex;justify-content:center;align-items:center;gap:16px;margin:20px 0}
+@media print{.pagination{display:none}}

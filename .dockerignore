@@ -5,3 +5,5 @@
 !admin.py
 !public/
 !public/**
+!gunicorn.conf.py
+!local_embeddings.py
