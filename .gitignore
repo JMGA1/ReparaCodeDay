@@ -7,3 +7,8 @@ __pycache__/
 
 # Certificados HTTPS locales
 caddy-data/
+
+# Datos locales
+data/
+*.sqlite3
+.env

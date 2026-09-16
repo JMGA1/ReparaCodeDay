@@ -10,12 +10,18 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 ROOT = Path(__file__).resolve().parent
 DATA = Path(os.environ.get('DATA_DIR', ROOT / 'data')); DATA.mkdir(parents=True, exist_ok=True)
 DB = DATA / 'ciudad.sqlite3'; PUBLIC = ROOT / 'public'
+DATABASE_URL=os.environ.get('DATABASE_URL','').strip(); USE_POSTGRES=DATABASE_URL.startswith(('postgres://','postgresql://'))
+if USE_POSTGRES:
+    try:
+        import psycopg
+        from psycopg.rows import dict_row
+    except ImportError as exc:
+        raise RuntimeError('DATABASE_URL está configurada pero falta psycopg. Ejecutá pip install psycopg[binary].') from exc
 CATEGORIES = ['Baches', 'Basura', 'Pérdidas de agua', 'Alumbrado', 'Otros']
 PRIORITIES = ['Baja', 'Media', 'Alta', 'Urgente']
 CITIES = ['Rivera', 'Santana do Livramento']; STATES = ['Recibido', 'En revisión', 'En proceso', 'Resuelto', 'Rechazado', 'Duplicado']
 PUBLIC_STATES = ('En revisión', 'En proceso', 'Resuelto')
 MAX_BODY = 4 * 1024 * 1024; Image.MAX_IMAGE_PIXELS = 30_000_000
-SESSIONS = {}; SESSION_LOCK = threading.Lock()
 EMAIL_RE = re.compile(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
 CENTERS = {'Rivera': (-30.905, -55.55), 'Santana do Livramento': (-30.89, -55.535)}
 DEFAULT_ASSIGNEES = {
@@ -23,8 +29,39 @@ DEFAULT_ASSIGNEES = {
     'Santana do Livramento': ['Sin asignar', 'Equipe de manutenção', 'Iluminação pública', 'Limpeza urbana', 'Saneamento / água']
 }
 
+class PgResult:
+    def __init__(self, cur): self.cur=cur; self.rowcount=cur.rowcount
+    def fetchone(self): return self.cur.fetchone()
+    def fetchall(self): return self.cur.fetchall()
+    def __iter__(self): return iter(self.cur)
+
+class PgConnection:
+    def __init__(self): self.con=psycopg.connect(DATABASE_URL, row_factory=dict_row)
+    def __enter__(self): return self
+    def __exit__(self, exc_type, exc, tb):
+        if exc_type: self.con.rollback()
+        else: self.con.commit()
+        self.con.close()
+    def execute(self, sql, params=()):
+        sql=sql.replace(' COLLATE NOCASE','').replace('?', '%s')
+        cur=self.con.execute(sql, params)
+        return PgResult(cur)
+    def executescript(self, script):
+        for stmt in script.split(';'):
+            if stmt.strip(): self.con.execute(stmt)
+    def commit(self): self.con.commit()
+    def rollback(self): self.con.rollback()
+
 def connection():
+    if USE_POSTGRES: return PgConnection()
     con=sqlite3.connect(DB, timeout=10); con.row_factory=sqlite3.Row; con.execute('PRAGMA foreign_keys=ON'); return con
+
+def exec_ignore(con, sql, params=()):
+    if USE_POSTGRES:
+        sql=sql.replace('INSERT OR IGNORE INTO','INSERT INTO').replace('?', '%s')
+        if 'ON CONFLICT' not in sql.upper(): sql=sql.rstrip().rstrip(';')+' ON CONFLICT DO NOTHING'
+        return PgResult(con.con.execute(sql, params))
+    return con.execute(sql,params)
 
 def password_hash(password, salt=None):
     salt = salt or secrets.token_bytes(16)
@@ -35,7 +72,10 @@ def verify_password(password, salt_hex, digest_hex):
     _, got = password_hash(password, bytes.fromhex(salt_hex))
     return hmac.compare_digest(got, digest_hex)
 
-def columns(con, table): return {r['name'] for r in con.execute(f'PRAGMA table_info({table})')}
+def columns(con, table):
+    if USE_POSTGRES:
+        return {r['column_name'] for r in con.execute("SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name=?",(table,))}
+    return {r['name'] for r in con.execute(f'PRAGMA table_info({table})')}
 
 def public_code(city, ident, created_at=None):
     year=(created_at or datetime.now(timezone.utc).isoformat())[:4]
@@ -44,75 +84,68 @@ def public_code(city, ident, created_at=None):
 
 def init():
     with connection() as con:
-        con.execute('PRAGMA journal_mode=WAL')
-        con.executescript('''
-        CREATE TABLE IF NOT EXISTS incidents (
-            id INTEGER PRIMARY KEY AUTOINCREMENT, request_id TEXT UNIQUE NOT NULL,
-            public_code TEXT UNIQUE,
-            title TEXT NOT NULL, category TEXT NOT NULL, city TEXT NOT NULL,
-            address TEXT NOT NULL, description TEXT NOT NULL,
-            lat REAL NOT NULL, lng REAL NOT NULL, status TEXT NOT NULL DEFAULT 'Recibido',
-            assignee TEXT NOT NULL DEFAULT 'Sin asignar', created_at TEXT NOT NULL,
-            demo INTEGER NOT NULL DEFAULT 0, revision INTEGER NOT NULL DEFAULT 1, photo BLOB,
-            summary TEXT NOT NULL DEFAULT '', priority TEXT NOT NULL DEFAULT 'Media',
-            priority_reason TEXT NOT NULL DEFAULT '', ai_source TEXT NOT NULL DEFAULT 'fallback',
-            duplicate_of INTEGER
-        );
-        CREATE TABLE IF NOT EXISTS history (id INTEGER PRIMARY KEY, incident_id INTEGER NOT NULL REFERENCES incidents(id), at TEXT NOT NULL, message TEXT NOT NULL);
-        CREATE TABLE IF NOT EXISTS confirmations (incident_id INTEGER NOT NULL REFERENCES incidents(id), device TEXT NOT NULL, PRIMARY KEY (incident_id, device));
-        CREATE TABLE IF NOT EXISTS subscriptions (
-            incident_id INTEGER NOT NULL REFERENCES incidents(id) ON DELETE CASCADE,
-            email TEXT NOT NULL COLLATE NOCASE,
-            created_at TEXT NOT NULL,
-            PRIMARY KEY (incident_id,email)
-        );
-        CREATE TABLE IF NOT EXISTS admin_users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE NOT NULL COLLATE NOCASE,
-            password_salt TEXT NOT NULL, password_hash TEXT NOT NULL, city TEXT NOT NULL,
-            active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL
-        );
-        CREATE TABLE IF NOT EXISTS assignees (
-            id INTEGER PRIMARY KEY AUTOINCREMENT, city TEXT NOT NULL, name TEXT NOT NULL,
-            active INTEGER NOT NULL DEFAULT 1, UNIQUE(city,name)
-        );
-        ''')
-        # Migración desde v3: SQLite antiguo no tenía public_code.
-        if 'public_code' not in columns(con,'incidents'):
-            con.execute('ALTER TABLE incidents ADD COLUMN public_code TEXT')
-            con.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_incidents_public_code ON incidents(public_code)')
-        migrations = {
-            'summary': "TEXT NOT NULL DEFAULT ''",
-            'priority': "TEXT NOT NULL DEFAULT 'Media'",
-            'priority_reason': "TEXT NOT NULL DEFAULT ''",
-            'ai_source': "TEXT NOT NULL DEFAULT 'fallback'",
-            'duplicate_of': "INTEGER"
-        }
-        existing = columns(con,'incidents')
-        for col, ddl in migrations.items():
-            if col not in existing: con.execute(f'ALTER TABLE incidents ADD COLUMN {col} {ddl}')
-        for row in con.execute('SELECT id,city,created_at FROM incidents WHERE public_code IS NULL OR public_code=""').fetchall():
+        if USE_POSTGRES:
+            con.executescript("""
+            CREATE TABLE IF NOT EXISTS incidents (
+                id BIGSERIAL PRIMARY KEY, request_id TEXT UNIQUE NOT NULL, public_code TEXT UNIQUE,
+                title TEXT NOT NULL, category TEXT NOT NULL, city TEXT NOT NULL,
+                address TEXT NOT NULL, description TEXT NOT NULL,
+                lat DOUBLE PRECISION NOT NULL, lng DOUBLE PRECISION NOT NULL, status TEXT NOT NULL DEFAULT 'Recibido',
+                assignee TEXT NOT NULL DEFAULT 'Sin asignar', created_at TEXT NOT NULL,
+                demo INTEGER NOT NULL DEFAULT 0, revision INTEGER NOT NULL DEFAULT 1, photo BYTEA,
+                summary TEXT NOT NULL DEFAULT '', priority TEXT NOT NULL DEFAULT 'Media',
+                priority_reason TEXT NOT NULL DEFAULT '', ai_source TEXT NOT NULL DEFAULT 'fallback', duplicate_of BIGINT
+            );
+            CREATE TABLE IF NOT EXISTS history (id BIGSERIAL PRIMARY KEY, incident_id BIGINT NOT NULL REFERENCES incidents(id) ON DELETE CASCADE, at TEXT NOT NULL, message TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS confirmations (incident_id BIGINT NOT NULL REFERENCES incidents(id) ON DELETE CASCADE, device TEXT NOT NULL, PRIMARY KEY (incident_id, device));
+            CREATE TABLE IF NOT EXISTS subscriptions (incident_id BIGINT NOT NULL REFERENCES incidents(id) ON DELETE CASCADE, email TEXT NOT NULL, created_at TEXT NOT NULL, PRIMARY KEY (incident_id,email));
+            CREATE TABLE IF NOT EXISTS admin_users (id BIGSERIAL PRIMARY KEY, username TEXT UNIQUE NOT NULL, password_salt TEXT NOT NULL, password_hash TEXT NOT NULL, city TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS assignees (id BIGSERIAL PRIMARY KEY, city TEXT NOT NULL, name TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1, UNIQUE(city,name));
+            CREATE TABLE IF NOT EXISTS admin_sessions (token TEXT PRIMARY KEY, username TEXT NOT NULL, city TEXT NOT NULL, created_at TEXT NOT NULL);
+            CREATE INDEX IF NOT EXISTS idx_incidents_city_status ON incidents(city,status);
+            CREATE INDEX IF NOT EXISTS idx_incidents_created_at ON incidents(created_at);
+            """)
+        else:
+            con.execute('PRAGMA journal_mode=WAL')
+            con.executescript("""
+            CREATE TABLE IF NOT EXISTS incidents (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, request_id TEXT UNIQUE NOT NULL, public_code TEXT UNIQUE,
+                title TEXT NOT NULL, category TEXT NOT NULL, city TEXT NOT NULL,
+                address TEXT NOT NULL, description TEXT NOT NULL,
+                lat REAL NOT NULL, lng REAL NOT NULL, status TEXT NOT NULL DEFAULT 'Recibido',
+                assignee TEXT NOT NULL DEFAULT 'Sin asignar', created_at TEXT NOT NULL,
+                demo INTEGER NOT NULL DEFAULT 0, revision INTEGER NOT NULL DEFAULT 1, photo BLOB,
+                summary TEXT NOT NULL DEFAULT '', priority TEXT NOT NULL DEFAULT 'Media',
+                priority_reason TEXT NOT NULL DEFAULT '', ai_source TEXT NOT NULL DEFAULT 'fallback', duplicate_of INTEGER
+            );
+            CREATE TABLE IF NOT EXISTS history (id INTEGER PRIMARY KEY, incident_id INTEGER NOT NULL REFERENCES incidents(id) ON DELETE CASCADE, at TEXT NOT NULL, message TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS confirmations (incident_id INTEGER NOT NULL REFERENCES incidents(id) ON DELETE CASCADE, device TEXT NOT NULL, PRIMARY KEY (incident_id, device));
+            CREATE TABLE IF NOT EXISTS subscriptions (incident_id INTEGER NOT NULL REFERENCES incidents(id) ON DELETE CASCADE, email TEXT NOT NULL COLLATE NOCASE, created_at TEXT NOT NULL, PRIMARY KEY (incident_id,email));
+            CREATE TABLE IF NOT EXISTS admin_users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE NOT NULL COLLATE NOCASE, password_salt TEXT NOT NULL, password_hash TEXT NOT NULL, city TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS assignees (id INTEGER PRIMARY KEY AUTOINCREMENT, city TEXT NOT NULL, name TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1, UNIQUE(city,name));
+            CREATE TABLE IF NOT EXISTS admin_sessions (token TEXT PRIMARY KEY, username TEXT NOT NULL, city TEXT NOT NULL, created_at TEXT NOT NULL);
+            """)
+            if 'public_code' not in columns(con,'incidents'):
+                con.execute('ALTER TABLE incidents ADD COLUMN public_code TEXT')
+                con.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_incidents_public_code ON incidents(public_code)')
+            migrations={'summary':"TEXT NOT NULL DEFAULT ''",'priority':"TEXT NOT NULL DEFAULT 'Media'",'priority_reason':"TEXT NOT NULL DEFAULT ''",'ai_source':"TEXT NOT NULL DEFAULT 'fallback'",'duplicate_of':'INTEGER'}
+            existing=columns(con,'incidents')
+            for col,ddl in migrations.items():
+                if col not in existing: con.execute(f'ALTER TABLE incidents ADD COLUMN {col} {ddl}')
+        for row in con.execute("SELECT id,city,created_at FROM incidents WHERE public_code IS NULL OR public_code=''").fetchall():
             con.execute('UPDATE incidents SET public_code=? WHERE id=?',(public_code(row['city'],row['id'],row['created_at']),row['id']))
-        for city, names in DEFAULT_ASSIGNEES.items():
-            for name in names: con.execute('INSERT OR IGNORE INTO assignees(city,name) VALUES (?,?)',(city,name))
-
-        # Modo de presentación: crea cuentas locales de demostración automáticamente.
-        # No se activa fuera de Docker salvo que DEMO_MODE=1.
-        if os.environ.get('DEMO_MODE','0') == '1':
+        for city,names in DEFAULT_ASSIGNEES.items():
+            for name in names: exec_ignore(con,'INSERT OR IGNORE INTO assignees(city,name) VALUES (?,?)',(city,name))
+        if os.environ.get('DEMO_MODE','0')=='1':
             demo_password=os.environ.get('DEMO_ADMIN_PASSWORD','CiudadVisible2026!')
-            demo_users=[
-                (os.environ.get('DEMO_RIVERA_USER','rivera'), 'Rivera'),
-                (os.environ.get('DEMO_LIVRAMENTO_USER','livramento'), 'Santana do Livramento')
-            ]
-            for username, city in demo_users:
-                exists=con.execute('SELECT 1 FROM admin_users WHERE username=? COLLATE NOCASE',(username,)).fetchone()
+            demo_users=[(os.environ.get('DEMO_RIVERA_USER','rivera'),'Rivera'),(os.environ.get('DEMO_LIVRAMENTO_USER','livramento'),'Santana do Livramento')]
+            for username,city in demo_users:
+                exists=con.execute('SELECT 1 FROM admin_users WHERE LOWER(username)=LOWER(?)',(username,)).fetchone()
                 if not exists:
                     salt,digest=password_hash(demo_password)
-                    con.execute('INSERT INTO admin_users(username,password_salt,password_hash,city,created_at) VALUES (?,?,?,?,?)',
-                                (username,salt,digest,city,now()))
-    if os.environ.get('DEMO_MODE','0') == '1':
-        print('Modo presentación activo. Cuentas demo disponibles para Rivera y Livramento.', flush=True)
-    else:
-        print('Panel privado: cree cuentas con "python admin.py user add <usuario> <ciudad>".', flush=True)
+                    con.execute('INSERT INTO admin_users(username,password_salt,password_hash,city,created_at) VALUES (?,?,?,?,?)',(username,salt,digest,city,now()))
+    print(('Modo presentación activo. Cuentas demo disponibles para Rivera y Livramento.' if os.environ.get('DEMO_MODE','0')=='1' else 'Panel privado: cree cuentas con python admin.py user add <usuario> <ciudad>.'),flush=True)
+    print(('Base de datos: PostgreSQL.' if USE_POSTGRES else f'Base de datos: SQLite ({DB}).'),flush=True)
 
 def now(): return datetime.now(timezone.utc).isoformat()
 def text(value, maximum, required=True):
@@ -226,7 +259,7 @@ def openai_analysis(description, candidates, photo_data=None):
 
 def serialize(con,row):
     r=dict(row); r.pop('request_id',None); r['photo_url']=f"/api/incidents/{r['id']}/photo" if r.pop('has_photo',False) else None; r['demo']=bool(r['demo'])
-    r['confirmations']=con.execute('SELECT count(*) FROM confirmations WHERE incident_id=?',(r['id'],)).fetchone()[0]
+    r['confirmations']=con.execute('SELECT count(*) AS total FROM confirmations WHERE incident_id=?',(r['id'],)).fetchone()['total']
     r['history']=[dict(h) for h in con.execute('SELECT at,message FROM history WHERE incident_id=? ORDER BY id',(r['id'],))]; return r
 SELECT='SELECT id,public_code,title,category,city,address,description,lat,lng,status,assignee,created_at,demo,revision,summary,priority,priority_reason,ai_source,duplicate_of,(photo IS NOT NULL) AS has_photo FROM incidents'
 
@@ -251,7 +284,10 @@ class Handler(SimpleHTTPRequestHandler):
         raw=json.dumps(data,ensure_ascii=False).encode(); self.send_response(status); self.send_header('Content-Type','application/json; charset=utf-8'); self.send_header('Content-Length',str(len(raw))); self.end_headers(); self.wfile.write(raw)
     def session(self):
         auth=self.headers.get('Authorization',''); token=auth[7:] if auth.startswith('Bearer ') else ''
-        with SESSION_LOCK:return SESSIONS.get(token)
+        if not token:return None
+        with connection() as con:
+            row=con.execute('SELECT username,city FROM admin_sessions WHERE token=?',(token,)).fetchone()
+            return dict(row) if row else None
     def require_session(self):
         s=self.session()
         if not s:self.send_json({'error':'Iniciá sesión con tu cuenta administrativa.'},401)
@@ -312,12 +348,12 @@ class Handler(SimpleHTTPRequestHandler):
                 if not row:return self.send_json({'error':'Incidencia no encontrada.'},404)
                 if len(parts)==4 and parts[3]=='confirm' and self.command=='POST':
                     if row['status'] not in PUBLIC_STATES:return self.send_json({'error':'Esta incidencia todavía no está disponible públicamente.'},404)
-                    device=text(body.get('device'),100); cur=con.execute('INSERT OR IGNORE INTO confirmations VALUES (?,?)',(ident,device))
+                    device=text(body.get('device'),100); cur=exec_ignore(con,'INSERT OR IGNORE INTO confirmations VALUES (?,?)',(ident,device))
                     if cur.rowcount:
                         msg='Un vecino solicita revisar el cierre.' if row['status']=='Resuelto' else 'Un vecino indicó “También vi este problema”.'; con.execute('INSERT INTO history(incident_id,at,message) VALUES (?,?,?)',(ident,now(),msg))
-                    con.commit(); return self.send_json({'ok':True,'added':bool(cur.rowcount),'confirmations':con.execute('SELECT count(*) FROM confirmations WHERE incident_id=?',(ident,)).fetchone()[0]})
+                    con.commit(); return self.send_json({'ok':True,'added':bool(cur.rowcount),'confirmations':con.execute('SELECT count(*) AS total FROM confirmations WHERE incident_id=?',(ident,)).fetchone()['total']})
                 if len(parts)==4 and parts[3]=='subscribe' and self.command=='POST':
-                    email=valid_email(body.get('email')); cur=con.execute('INSERT OR IGNORE INTO subscriptions(incident_id,email,created_at) VALUES (?,?,?)',(ident,email,now())); con.commit()
+                    email=valid_email(body.get('email')); cur=exec_ignore(con,'INSERT OR IGNORE INTO subscriptions(incident_id,email,created_at) VALUES (?,?,?)',(ident,email,now())); con.commit()
                     return self.send_json({'ok':True,'added':bool(cur.rowcount),'notifications_enabled':smtp_enabled()})
                 if len(parts)==3 and self.command=='PATCH':
                     s=self.require_session()
@@ -343,14 +379,15 @@ class Handler(SimpleHTTPRequestHandler):
             import traceback; traceback.print_exc(); return self.send_json({'error':'No se pudo guardar. Intentá nuevamente.'},500)
     def login(self,body):
         username=text(body.get('username'),80); password=text(body.get('password'),200)
-        with connection() as con:row=con.execute('SELECT * FROM admin_users WHERE username=? COLLATE NOCASE AND active=1',(username,)).fetchone()
+        with connection() as con:row=con.execute('SELECT * FROM admin_users WHERE LOWER(username)=LOWER(?) AND active=1',(username,)).fetchone()
         if not row or not verify_password(password,row['password_salt'],row['password_hash']):return self.send_json({'error':'Usuario o contraseña incorrectos.'},401)
         token=secrets.token_urlsafe(32); user={'username':row['username'],'city':row['city']}
-        with SESSION_LOCK:SESSIONS[token]=user
+        with connection() as con: con.execute('INSERT INTO admin_sessions(token,username,city,created_at) VALUES (?,?,?,?)',(token,user['username'],user['city'],now()))
         return self.send_json({'token':token,'user':user})
     def logout(self):
         auth=self.headers.get('Authorization',''); token=auth[7:] if auth.startswith('Bearer ') else ''
-        with SESSION_LOCK:SESSIONS.pop(token,None)
+        if token:
+            with connection() as con: con.execute('DELETE FROM admin_sessions WHERE token=?',(token,))
         return self.send_json({'ok':True})
     def create(self,body):
         description=text(body.get('description'),1500)
@@ -372,11 +409,14 @@ class Handler(SimpleHTTPRequestHandler):
         with connection() as con:
             con.execute('BEGIN IMMEDIATE'); old=con.execute('SELECT id,public_code FROM incidents WHERE request_id=?',(rid,)).fetchone()
             if old:return self.send_json({'id':old['id'],'code':old['public_code']},200)
-            cur=con.execute('INSERT INTO incidents(request_id,public_code,title,category,city,address,description,lat,lng,created_at,photo,summary,priority,priority_reason,ai_source,duplicate_of) VALUES (?,NULL,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
-                (rid,title,category,city,address,description,lat,lng,now(),photo,summary,priority,reason,analysis['source'],analysis.get('duplicate_id') if body.get('force_new') else None)); ident=cur.lastrowid
+            params=(rid,title,category,city,address,description,lat,lng,now(),photo,summary,priority,reason,analysis['source'],analysis.get('duplicate_id') if body.get('force_new') else None)
+            if USE_POSTGRES:
+                ident=con.execute('INSERT INTO incidents(request_id,public_code,title,category,city,address,description,lat,lng,created_at,photo,summary,priority,priority_reason,ai_source,duplicate_of) VALUES (?,NULL,?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING id',params).fetchone()['id']
+            else:
+                ident=con.execute('INSERT INTO incidents(request_id,public_code,title,category,city,address,description,lat,lng,created_at,photo,summary,priority,priority_reason,ai_source,duplicate_of) VALUES (?,NULL,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',params).lastrowid
             code=public_code(city,ident); con.execute('UPDATE incidents SET public_code=? WHERE id=?',(code,ident))
             con.execute('INSERT INTO confirmations VALUES (?,?)',(ident,device)); con.execute('INSERT INTO history(incident_id,at,message) VALUES (?,?,?)',(ident,now(),'Reporte recibido. Pendiente de revisión administrativa antes de su publicación.'))
-            if email: con.execute('INSERT OR IGNORE INTO subscriptions(incident_id,email,created_at) VALUES (?,?,?)',(ident,email,now()))
+            if email: exec_ignore(con,'INSERT OR IGNORE INTO subscriptions(incident_id,email,created_at) VALUES (?,?,?)',(ident,email,now()))
         return self.send_json({'id':ident,'code':code,'city':city,'category':category,'title':title,'summary':summary,'priority':priority,'priority_reason':reason,'ai_source':analysis['source'],'subscribed':bool(email),'notifications_enabled':smtp_enabled()},201)
     def seed(self,city):
         examples=[('Bache de ejemplo','Baches','Rivera',-30.906,-55.551,'Recibido'),('Residuos de ejemplo','Basura','Rivera',-30.912,-55.541,'En revisión'),('Pérdida de ejemplo','Pérdidas de agua','Rivera',-30.9015,-55.555,'En proceso'),('Iluminación de ejemplo','Alumbrado','Santana do Livramento',-30.886,-55.538,'Recibido'),('Bache reparado de ejemplo','Baches','Santana do Livramento',-30.89,-55.527,'Resuelto'),('Residuos de ejemplo','Basura','Santana do Livramento',-30.88,-55.545,'En proceso')]
@@ -384,9 +424,13 @@ class Handler(SimpleHTTPRequestHandler):
         with connection() as con:
             for i,(title,cat,item_city,lat,lng,state) in enumerate(examples):
                 if item_city!=city:continue
-                cur=con.execute('INSERT OR IGNORE INTO incidents(request_id,public_code,title,category,city,address,description,lat,lng,status,created_at,demo) VALUES (?,NULL,?,?,?,?,?,?,?,?,?,1)',(f'demo-v4-{i}',title,cat,item_city,'Punto ilustrativo, no es un problema real','Registro ficticio para la presentación académica.',lat,lng,state,now()))
-                if cur.rowcount:
-                    added+=1; code=public_code(item_city,cur.lastrowid); con.execute('UPDATE incidents SET public_code=? WHERE id=?',(code,cur.lastrowid)); con.execute('INSERT INTO confirmations VALUES (?,?)',(cur.lastrowid,'demo')); con.execute('INSERT INTO history(incident_id,at,message) VALUES (?,?,?)',(cur.lastrowid,now(),'Ejemplo ficticio cargado desde el panel privado.'))
+                params=(f'demo-v4-{i}',title,cat,item_city,'Punto ilustrativo, no es un problema real','Registro ficticio para la presentación académica.',lat,lng,state,now())
+                if USE_POSTGRES:
+                    got=con.execute('INSERT INTO incidents(request_id,public_code,title,category,city,address,description,lat,lng,status,created_at,demo) VALUES (?,NULL,?,?,?,?,?,?,?,?,?,1) ON CONFLICT (request_id) DO NOTHING RETURNING id',params).fetchone(); ident=got['id'] if got else None
+                else:
+                    cur=con.execute('INSERT OR IGNORE INTO incidents(request_id,public_code,title,category,city,address,description,lat,lng,status,created_at,demo) VALUES (?,NULL,?,?,?,?,?,?,?,?,?,1)',params); ident=cur.lastrowid if cur.rowcount else None
+                if ident:
+                    added+=1; code=public_code(item_city,ident); con.execute('UPDATE incidents SET public_code=? WHERE id=?',(code,ident)); exec_ignore(con,'INSERT OR IGNORE INTO confirmations VALUES (?,?)',(ident,'demo')); con.execute('INSERT INTO history(incident_id,at,message) VALUES (?,?,?)',(ident,now(),'Ejemplo ficticio cargado desde el panel privado.'))
         return self.send_json({'added':added})
 
 if __name__=='__main__':

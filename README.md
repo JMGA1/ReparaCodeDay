@@ -1,3 +1,30 @@
+# Repara v10 · Online-ready
+
+Esta versión mantiene **SQLite + Docker local** y agrega **PostgreSQL para Render**. Las sesiones administrativas se guardan en la base de datos y el navegador conserva el token durante la pestaña/sesión, por lo que cambiar entre Mapa ciudadano y Panel privado ya no cierra la sesión. El panel consulta datos nuevamente cada 10 segundos para recibir reportes creados desde otros dispositivos. Las fotos se guardan en la misma base de datos.
+
+## Render: conectar PostgreSQL al servicio ya publicado
+
+1. En Render: **New → Postgres**. Creá una base (por ejemplo `repara-db`) en la **misma región** que tu Web Service.
+2. Abrí la base creada → **Connect** y copiá la **Internal Database URL**.
+3. Abrí tu Web Service Repara → **Environment** → agregá `DATABASE_URL` con esa URL interna.
+4. Conservá `DEMO_MODE=1` para las cuentas de evaluación. Podés definir `DEMO_ADMIN_PASSWORD` con tu propia contraseña.
+5. Hacé **Save and deploy** / **Deploy latest commit**. En los logs debe aparecer `Base de datos: PostgreSQL.`
+6. Probá desde el celular: creá una incidencia. Queda en `Recibido` (privada). En hasta ~10 s debe aparecer en el Panel privado de la ciudad correspondiente. Al aprobarla y pasarla a `En revisión`, aparece en el mapa público.
+
+> `DATABASE_URL` nunca debe subirse a GitHub. En Render se configura como variable de entorno.
+
+## Docker local
+
+Sin `DATABASE_URL`, Repara usa SQLite automáticamente:
+
+```bash
+docker compose up --build -d
+```
+
+Abrí `http://localhost:8081`.
+
+---
+
 ## Cambios de UI v6
 
 - Nueva portada/hero para dejar claro que Ciudad Visible sirve para reportar incidencias urbanas desde web o celular.

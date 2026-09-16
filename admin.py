@@ -1,6 +1,6 @@
-"""Administración local de cuentas y responsables de Ciudad Visible."""
+"""Administración local de cuentas y responsables de Repara."""
 import getpass, sys
-from server import CITIES, connection, init, now, password_hash
+from server import CITIES, connection, exec_ignore, init, now, password_hash
 
 def usage():
     print('Uso:')
@@ -27,7 +27,7 @@ def main():
     elif len(args)>=4 and args[:2]==['responsible','add']:
         city=args[2]; name=' '.join(args[3:]).strip()
         if city not in CITIES: raise SystemExit('Para nombres con espacios en la ciudad use comillas: "Santana do Livramento".')
-        with connection() as con:con.execute('INSERT OR IGNORE INTO assignees(city,name) VALUES (?,?)',(city,name))
+        with connection() as con:exec_ignore(con,'INSERT OR IGNORE INTO assignees(city,name) VALUES (?,?)',(city,name))
         print(f'Responsable agregado en {city}: {name}')
     elif args==['responsible','list']:
         with connection() as con:
