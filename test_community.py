@@ -80,6 +80,60 @@ class CommunityDetailsTest(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 400)
 
+    def test_resolving_incident_closes_linked_community_action(self):
+        created = self.report(request_id="close-community")
+        self.assertEqual(created.status_code, 201)
+        ident = created.json["id"]
+        headers = {"Authorization": "Bearer " + self.login()}
+        with server.connection() as con:
+            con.execute(
+                "UPDATE incidents SET status='En revisión' WHERE id=?", (ident,)
+            )
+            revision = con.execute(
+                "SELECT revision FROM incidents WHERE id=?", (ident,)
+            ).fetchone()["revision"]
+        payload = dict(
+            title="Limpieza comunitaria",
+            activity_details="Recoger residuos livianos de la plaza.",
+            meeting_point="Entrada principal",
+            schedule="Sábado 10:00",
+            organizer="Comisión vecinal",
+            materials="Guantes y bolsas.",
+        )
+        created_action = self.client.post(
+            f"/api/incidents/{ident}/community-action", json=payload, headers=headers
+        )
+        self.assertEqual(created_action.status_code, 200)
+        action_id = created_action.json["action_id"]
+        self.assertEqual(len(self.client.get("/api/community-actions").json), 1)
+
+        resolved = self.client.patch(
+            f"/api/incidents/{ident}",
+            json={
+                "revision": revision,
+                "status": "Resuelto",
+                "assignee": "Sin asignar",
+                "priority": "Media",
+                "note": "Trabajo finalizado",
+            },
+            headers=headers,
+        )
+        self.assertEqual(resolved.status_code, 200)
+        self.assertEqual(self.client.get("/api/community-actions").json, [])
+        self.assertEqual(
+            self.client.post(
+                f"/api/community-actions/{action_id}/interest",
+                json={"device": "late-volunteer"},
+            ).status_code,
+            404,
+        )
+        with server.connection() as con:
+            action = con.execute(
+                "SELECT status FROM community_actions WHERE id=?", (action_id,)
+            ).fetchone()
+            self.assertEqual(action["status"], "Cerrada")
+
+
 
 if __name__ == "__main__":
     unittest.main()

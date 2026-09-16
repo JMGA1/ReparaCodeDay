@@ -1,5 +1,12 @@
 # Historial
 
+## v11.6 — Cierre sincronizado de acciones comunitarias
+
+- Al resolver, rechazar o marcar como duplicada una incidencia, su acción comunitaria activa se cierra automáticamente.
+- Las oportunidades vinculadas a incidencias ya finalizadas dejan de publicarse y ya no aceptan nuevos interesados.
+- Las acciones antiguas que hubieran quedado activas por cierres previos también se ocultan por el estado actual de la incidencia.
+- No se permite crear una nueva acción comunitaria sobre una incidencia ya resuelta.
+
 ## v11.4 — Gestión individual y scroll del modal
 
 - El modal administrativo bloquea el scroll de la página de fondo y desplaza únicamente su contenido.

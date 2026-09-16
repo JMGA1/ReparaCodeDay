@@ -1141,7 +1141,7 @@ class Handler:
         if path == "/api/community-actions":
             with connection() as con:
                 rows = con.execute(
-                    "SELECT ca.*,i.public_code,i.lat,i.lng,i.address,i.category,i.title AS incident_title,i.description AS incident_description,(i.photo IS NOT NULL OR i.photo_path IS NOT NULL) AS has_photo,(SELECT count(*) FROM community_interests ci WHERE ci.action_id=ca.id) AS volunteers FROM community_actions ca JOIN incidents i ON i.id=ca.incident_id WHERE ca.status='Activa' AND i.status IN ('En revisión','En proceso','Resuelto') ORDER BY ca.id DESC"
+                    "SELECT ca.*,i.public_code,i.lat,i.lng,i.address,i.category,i.title AS incident_title,i.description AS incident_description,(i.photo IS NOT NULL OR i.photo_path IS NOT NULL) AS has_photo,(SELECT count(*) FROM community_interests ci WHERE ci.action_id=ca.id) AS volunteers FROM community_actions ca JOIN incidents i ON i.id=ca.incident_id WHERE ca.status='Activa' AND i.status IN ('En revisión','En proceso') ORDER BY ca.id DESC"
                 ).fetchall()
                 return self.send_json([dict(r) for r in rows])
         if path == "/api/incidents":
@@ -1276,7 +1276,7 @@ class Handler:
                 device = text(body.get("device"), 100)
                 with connection() as con:
                     action = con.execute(
-                        "SELECT ca.id FROM community_actions ca JOIN incidents i ON i.id=ca.incident_id WHERE ca.id=? AND ca.status='Activa' AND i.status IN ('En revisión','En proceso','Resuelto')",
+                        "SELECT ca.id FROM community_actions ca JOIN incidents i ON i.id=ca.incident_id WHERE ca.id=? AND ca.status='Activa' AND i.status IN ('En revisión','En proceso')",
                         (action_id,),
                     ).fetchone()
                     if not action:
@@ -1342,10 +1342,10 @@ class Handler:
                             },
                             400,
                         )
-                    if row["status"] not in PUBLIC_STATES:
+                    if row["status"] not in ("En revisión", "En proceso"):
                         return self.send_json(
                             {
-                                "error": "Aprobá y publicá la incidencia antes de crear la acción comunitaria."
+                                "error": "La incidencia debe estar activa y publicada para crear una acción comunitaria."
                             },
                             400,
                         )
@@ -1546,6 +1546,20 @@ class Handler:
                             f"{status} · {assignee} · Prioridad {priority}: {note}",
                         ),
                     )
+                    if status in ("Resuelto", "Rechazado", "Duplicado"):
+                        closed = con.execute(
+                            "UPDATE community_actions SET status='Cerrada',revision=revision+1 WHERE incident_id=? AND status='Activa'",
+                            (ident,),
+                        )
+                        if closed.rowcount:
+                            con.execute(
+                                "INSERT INTO history(incident_id,at,message) VALUES (?,?,?)",
+                                (
+                                    ident,
+                                    now(),
+                                    "Acción comunitaria cerrada automáticamente al finalizar la incidencia.",
+                                ),
+                            )
                     subscribers = [
                         r["email"]
                         for r in con.execute(
