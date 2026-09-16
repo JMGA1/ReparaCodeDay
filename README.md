@@ -473,3 +473,6 @@ Desde el **Panel privado**, el administrador revisa el reporte y puede:
 - **Marcar duplicada**: cambia a **Duplicado** y permanece fuera de la vista pública.
 
 Los estados públicos son **En revisión**, **En proceso** y **Resuelto**. El ciudadano recibe al crear el reporte un código de seguimiento y un aviso indicando que la incidencia será revisada antes de publicarse.
+
+## v10.3 - corrección de login
+El refresco automático de incidencias se ejecuta únicamente cuando el Panel privado ya tiene una sesión autenticada. La pantalla de acceso ya no se vuelve a renderizar cada 10 segundos mientras se escriben usuario y contraseña, lo que mejora especialmente el uso desde celular.
