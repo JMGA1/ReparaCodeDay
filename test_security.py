@@ -450,6 +450,22 @@ class PureTest(unittest.TestCase):
         self.assertEqual(result["duplicate_id"], 1)
         self.assertGreaterEqual(result["duplicate_confidence"], 0.68)
 
+    def test_public_demo_requires_opt_in_and_custom_password(self):
+        with patch.dict(
+            os.environ,
+            {
+                "APP_ENV": "production",
+                "DEMO_MODE": "1",
+                "ALLOW_PUBLIC_DEMO": "1",
+                "DEMO_ADMIN_PASSWORD": "a-unique-test-password",
+            },
+        ):
+            server.validate_configuration()
+            for password in ("", "short", "CiudadVisible2026!"):
+                with patch.dict(os.environ, {"DEMO_ADMIN_PASSWORD": password}):
+                    with self.assertRaises(RuntimeError):
+                        server.validate_configuration()
+
     def test_production_rejects_demo(self):
         with patch.dict(os.environ, {"APP_ENV": "production", "DEMO_MODE": "1"}):
             with self.assertRaises(RuntimeError):

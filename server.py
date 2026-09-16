@@ -209,14 +209,15 @@ def public_code(city, ident, created_at=None):
 
 def validate_configuration():
     if os.environ.get("DEMO_MODE", "0") == "1":
-        if (
+        public_environment = (
             os.environ.get("APP_ENV") == "production"
-            or DATABASE_URL
-            or os.environ.get("RENDER")
-            or os.environ.get("PUBLIC_URL")
-        ):
+            or bool(DATABASE_URL)
+            or bool(os.environ.get("RENDER"))
+            or bool(os.environ.get("PUBLIC_URL"))
+        )
+        if public_environment and os.environ.get("ALLOW_PUBLIC_DEMO", "0") != "1":
             raise RuntimeError(
-                "DEMO_MODE no está permitido en producción o con DATABASE_URL/PUBLIC_URL."
+                "La demo pública requiere ALLOW_PUBLIC_DEMO=1 y una contraseña propia."
             )
         password = os.environ.get("DEMO_ADMIN_PASSWORD", "")
         if len(password) < 12 or password == "CiudadVisible2026!":
@@ -224,7 +225,8 @@ def validate_configuration():
                 "Definí una DEMO_ADMIN_PASSWORD propia de al menos 12 caracteres."
             )
         log.warning(
-            "MODO DEMO ACTIVO: uso local exclusivamente; no publicar este servidor."
+            "MODO DEMO %s ACTIVO: datos de prueba y cuentas de presentación habilitadas.",
+            "PÚBLICO EXPLÍCITAMENTE AUTORIZADO" if public_environment else "LOCAL",
         )
 
 
@@ -2179,7 +2181,9 @@ def create_app(initialize=True):
     @app.route("/api/<path:path>", methods=["GET", "POST", "PATCH"])
     def api_route(path):
         handler = Handler()
-        return handler.do_GET() if request.method in ("GET", "HEAD") else handler.mutate()
+        return (
+            handler.do_GET() if request.method in ("GET", "HEAD") else handler.mutate()
+        )
 
     @app.route("/")
     def index():

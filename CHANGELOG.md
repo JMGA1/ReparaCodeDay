@@ -1,5 +1,10 @@
 # Historial
 
+## v11.1 — Demo pública explícita
+
+- `ALLOW_PUBLIC_DEMO=1` permite una presentación alojada sin retirar la exigencia de contraseña propia ni las protecciones de sesión y solicitudes.
+- Guía de Render con cuentas de prueba separadas de las cuentas heredadas.
+
 ## v11 — Seguridad, escalabilidad y mantenimiento
 
 - Flask + Gunicorn en Docker; cierre de conexiones SQLite y pool PostgreSQL por worker.

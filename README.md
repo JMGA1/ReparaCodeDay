@@ -1,11 +1,11 @@
-# Repara v11
+# Repara v11.1
 
 Reportes ciudadanos para Rivera y Santana do Livramento. Interfaz ES/PT, moderación por ciudad, mapas, fotos, informes y sugerencias de IA.
 
 ## Actualizar desde v10.8
 
 1. Respaldá la base de datos y el volumen persistente antes de reemplazar el código. Conservá `data/`, `.env` y las variables del hosting.
-2. En el hosting, cambiá **DEMO_MODE a 0 antes del despliegue**. Esta versión rechaza modo demo con `APP_ENV=production`, `DATABASE_URL`, `RENDER` o `PUBLIC_URL`.
+2. En el hosting, cambiá **DEMO_MODE a 0 antes del despliegue**. Para una demostración pública, utilizá la excepción explícita explicada abajo.
 3. Instalá las dependencias nuevas o reconstruí la imagen Docker.
 4. El arranque aplica migraciones aditivas automáticamente. Se invalidan las sesiones antiguas: todos deben volver a iniciar sesión.
 5. Las cuentas que aún usan la antigua contraseña demo quedan desactivadas. Recuperalas con `python admin.py user reset USUARIO` (en Docker: `docker compose exec web python admin.py user reset USUARIO`). El comando pide una contraseña nueva y reactiva la cuenta.
@@ -40,6 +40,22 @@ docker compose up --build -d
 docker compose exec web python admin.py user add manuel Rivera
 docker compose exec web python admin.py user owner manuel
 ```
+
+### Demo de prueba en Render (v11.1)
+
+Primero subí esta versión al repositorio. En el servicio web de Render → Environment, definí:
+
+| Variable | Valor |
+| --- | --- |
+| `DEMO_MODE` | `1` |
+| `ALLOW_PUBLIC_DEMO` | `1` |
+| `DEMO_ADMIN_PASSWORD` | Una contraseña propia de al menos 12 caracteres |
+| `DEMO_RIVERA_USER` | `demo_rivera` |
+| `DEMO_LIVRAMENTO_USER` | `demo_livramento` |
+
+Conservá `DATABASE_URL`. Guardá y reconstruí/desplegá. Se crean esos usuarios si no existen; ambos usan la contraseña elegida. Las cuentas existentes conservan sus contraseñas: la variable no las restablece. Los nombres nuevos evitan depender de las cuentas heredadas desactivadas. El botón de ejemplos aparece con modo demo activo. No se concede rol propietario a estas cuentas.
+
+Los límites de solicitudes, el TTL, la separación de ciudades y CSP siguen activos. Al terminar, definí `DEMO_MODE=0`, `ALLOW_PUBLIC_DEMO=0` y desactivá las cuentas de prueba desde el propietario; desactivar el modo por sí solo no elimina cuentas ni incidencias.
 
 Docker publica el puerto 8081 y ejecuta Flask mediante Gunicorn, con dos workers y cuatro hilos por worker. El volumen `ciudad_data` conserva SQLite y puede conservar fotos en `/data/photos`. El comando equivalente en Linux es:
 
@@ -92,7 +108,7 @@ python admin.py responsible add "Santana do Livramento" "Equipe de limpeza"
 | `DB_POOL_SIZE` | `8` conexiones máximas por worker; mínimo 1 |
 | `WEB_CONCURRENCY`, `WEB_THREADS` | `2`, `4` |
 | `TRUST_PROXY_HOPS` | `0`; configurar solo con un proxy confiable |
-| `DEMO_MODE` | `0`; `1` solo para desarrollo local |
+| `DEMO_MODE` | `0`; `1` para demo; en hosting requiere `ALLOW_PUBLIC_DEMO=1` |
 | `DEMO_ADMIN_PASSWORD` | Sin valor compartido; mínimo 12 caracteres |
 | `PHOTOS_DIR` | Vacío: BLOB; ruta persistente: archivos JPEG privados |
 | `TILE_URL` | Tiles de OpenStreetMap; su origen se agrega a CSP |
