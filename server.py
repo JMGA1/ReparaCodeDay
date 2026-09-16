@@ -371,6 +371,22 @@ def init():
             CREATE TABLE IF NOT EXISTS community_actions (id INTEGER PRIMARY KEY AUTOINCREMENT, incident_id INTEGER UNIQUE NOT NULL REFERENCES incidents(id) ON DELETE CASCADE, city TEXT NOT NULL, title TEXT NOT NULL, kind TEXT NOT NULL, description TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'Activa', created_at TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS community_interests (action_id INTEGER NOT NULL REFERENCES community_actions(id) ON DELETE CASCADE, device TEXT NOT NULL, created_at TEXT NOT NULL, PRIMARY KEY(action_id,device));
             """)
+        action_columns = columns(con, "community_actions")
+        for name in (
+            "activity_details",
+            "meeting_point",
+            "schedule",
+            "organizer",
+            "materials",
+        ):
+            if name not in action_columns:
+                con.execute(
+                    f"ALTER TABLE community_actions ADD COLUMN {name} TEXT NOT NULL DEFAULT ''"
+                )
+        if "revision" not in action_columns:
+            con.execute(
+                "ALTER TABLE community_actions ADD COLUMN revision INTEGER NOT NULL DEFAULT 1"
+            )
         for row in con.execute(
             "SELECT id,city,created_at FROM incidents WHERE public_code IS NULL OR public_code=''"
         ).fetchall():
@@ -1125,7 +1141,7 @@ class Handler:
         if path == "/api/community-actions":
             with connection() as con:
                 rows = con.execute(
-                    "SELECT ca.id,ca.incident_id,ca.city,ca.title,ca.kind,ca.description,ca.status,ca.created_at,i.public_code,i.lat,i.lng,(SELECT count(*) FROM community_interests ci WHERE ci.action_id=ca.id) AS volunteers FROM community_actions ca JOIN incidents i ON i.id=ca.incident_id WHERE ca.status='Activa' ORDER BY ca.id DESC"
+                    "SELECT ca.*,i.public_code,i.lat,i.lng,i.address,i.category,i.title AS incident_title,i.description AS incident_description,(i.photo IS NOT NULL OR i.photo_path IS NOT NULL) AS has_photo,(SELECT count(*) FROM community_interests ci WHERE ci.action_id=ca.id) AS volunteers FROM community_actions ca JOIN incidents i ON i.id=ca.incident_id WHERE ca.status='Activa' AND i.status IN ('En revisión','En proceso','Resuelto') ORDER BY ca.id DESC"
                 ).fetchall()
                 return self.send_json([dict(r) for r in rows])
         if path == "/api/incidents":
@@ -1260,7 +1276,7 @@ class Handler:
                 device = text(body.get("device"), 100)
                 with connection() as con:
                     action = con.execute(
-                        "SELECT id FROM community_actions WHERE id=? AND status='Activa'",
+                        "SELECT ca.id FROM community_actions ca JOIN incidents i ON i.id=ca.incident_id WHERE ca.id=? AND ca.status='Activa' AND i.status IN ('En revisión','En proceso','Resuelto')",
                         (action_id,),
                     ).fetchone()
                     if not action:
@@ -1334,7 +1350,8 @@ class Handler:
                             400,
                         )
                     title = text(
-                        row["community_title"]
+                        body.get("title")
+                        or row["community_title"]
                         or ("Acción comunitaria · " + row["title"]),
                         120,
                     )
@@ -1343,6 +1360,33 @@ class Handler:
                         row["community_reason"] or row["summary"] or row["description"],
                         500,
                     )
+                    details = {
+                        key: text(body.get(key, ""), limit, False)
+                        for key, limit in [
+                            ("activity_details", 1500),
+                            ("meeting_point", 250),
+                            ("schedule", 150),
+                            ("organizer", 150),
+                            ("materials", 500),
+                        ]
+                    }
+                    if body and not details["activity_details"]:
+                        raise ValueError(
+                            "Describí la actividad concreta que se realizará."
+                        )
+                    previous = con.execute(
+                        "SELECT id,revision FROM community_actions WHERE incident_id=?",
+                        (ident,),
+                    ).fetchone()
+                    if previous and not body:
+                        return self.send_json({"ok": True, "action_id": previous["id"]})
+                    if previous and body.get("revision") != previous["revision"]:
+                        return self.send_json(
+                            {
+                                "error": "La actividad cambió. Volvé a abrirla antes de guardar."
+                            },
+                            409,
+                        )
                     if USE_POSTGRES:
                         got = con.execute(
                             "INSERT INTO community_actions(incident_id,city,title,kind,description,created_at) VALUES (?,?,?,?,?,?) ON CONFLICT (incident_id) DO NOTHING RETURNING id",
@@ -1366,6 +1410,28 @@ class Handler:
                             "SELECT id FROM community_actions WHERE incident_id=?",
                             (ident,),
                         ).fetchone()["id"]
+                    expected = previous["revision"] if previous else 1
+                    changed = con.execute(
+                        "UPDATE community_actions SET title=?,activity_details=?,meeting_point=?,schedule=?,organizer=?,materials=?,revision=revision+1 WHERE id=? AND revision=?",
+                        (
+                            title,
+                            details["activity_details"],
+                            details["meeting_point"],
+                            details["schedule"],
+                            details["organizer"],
+                            details["materials"],
+                            action_id,
+                            expected,
+                        ),
+                    )
+                    if not changed.rowcount:
+                        con.rollback()
+                        return self.send_json(
+                            {
+                                "error": "La actividad cambió. Volvé a abrirla antes de guardar."
+                            },
+                            409,
+                        )
                     con.execute(
                         "INSERT INTO history(incident_id,at,message) VALUES (?,?,?)",
                         (
@@ -1739,7 +1805,9 @@ class Handler:
         ):
             raise ValueError("El punto debe estar en la zona de Rivera–Livramento.")
         city = infer_city(lat, lng)
-        address = "Ubicación marcada en el mapa"
+        address = (
+            text(body.get("address", ""), 200, False) or "Ubicación marcada en el mapa"
+        )
         rid = text(body.get("request_id"), 100)
         device = text(body.get("device"), 100)
         photo_values = body.get("photos", [body["photo"]] if body.get("photo") else [])

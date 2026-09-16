@@ -1,5 +1,27 @@
 # Historial
 
+## v11.4 — Gestión individual y scroll del modal
+
+- El modal administrativo bloquea el scroll de la página de fondo y desplaza únicamente su contenido.
+- Se eliminaron los checkboxes de selección y la acción masiva del listado de incidencias.
+- Se simplificó el listado para reflejar el flujo real: una incidencia se abre y se gestiona individualmente.
+
+## v11.3 — Jornadas comunitarias detalladas
+
+- Tarjetas con actividad, problema, dirección, ciudad y horario.
+- Detalle con mapa, reporte original, foto, punto de encuentro, responsable e indicaciones.
+- Formulario administrativo para crear/editar tareas y organización; control de revisión.
+- Conservación de interesados y campos antiguos sin inventar información.
+- Actividades ocultas cuando el reporte deja de ser público.
+- Pruebas de edición, ubicación, autorización y privacidad.
+
+## v11.2 — Ubicación visible al revisar
+
+- Dirección/referencia, ciudad y coordenadas en el detalle.
+- Mapa desplegable centrado en el reporte, sin cerrar la aprobación.
+- Campo opcional de calle/referencia para reportes nuevos.
+- Textos ES/PT y enlace a OpenStreetMap.
+
 ## v11.1 — Demo pública explícita
 
 - `ALLOW_PUBLIC_DEMO=1` permite una presentación alojada sin retirar la exigencia de contraseña propia ni las protecciones de sesión y solicitudes.

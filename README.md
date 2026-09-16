@@ -1,4 +1,4 @@
-# Repara v11.1
+# Repara v11.4
 
 Reportes ciudadanos para Rivera y Santana do Livramento. Interfaz ES/PT, moderación por ciudad, mapas, fotos, informes y sugerencias de IA.
 
@@ -161,3 +161,21 @@ En esta actualización se ejecutó la suite sobre SQLite y una comprobación de 
 El historial está en [CHANGELOG.md](CHANGELOG.md). La licencia del código propio queda pendiente de elección por su titular; no se asigna una licencia abierta sin esa decisión. Leaflet conserva su archivo `public/vendor/leaflet/LICENSE`; las demás dependencias conservan sus propias licencias.
 
 Referencias de implementación: [Flask/Gunicorn](https://flask.palletsprojects.com/en/stable/deploying/gunicorn/), [pool Psycopg](https://www.psycopg.org/psycopg3/docs/advanced/pool.html), [Sentence Transformers](https://sbert.net/docs/package_reference/sentence_transformer/model.html).
+
+## Ubicación en el detalle (v11.2)
+
+Los detalles públicos y administrativos muestran ciudad, coordenadas y calle/referencia cuando fue informada. El botón «Ver ubicación en el mapa» despliega el punto exacto dentro del detalle sin perder lo escrito en el formulario de aprobación. Incluye un enlace opcional a OpenStreetMap en otra pestaña. Los reportes nuevos admiten calle/número/referencia opcional; los antiguos con dirección genérica muestran «Dirección no informada». No se infiere ni geocodifica automáticamente la dirección. Se conserva la configuración de demo pública de v11.1.
+
+## Actividades comunitarias (v11.3)
+
+Las oportunidades muestran tareas concretas, problema vinculado, dirección/ciudad, horario e interesados. «Ver actividad y ubicación» abre el detalle completo con el mapa del reporte, su descripción y foto cuando existe, punto de encuentro, organización e indicaciones. La ubicación del mapa corresponde al reporte; el punto de encuentro es una referencia textual definida por la administración.
+
+Desde el detalle administrativo, «Crear acción comunitaria» abre un formulario: las tareas son obligatorias y fecha/horario local, encuentro, responsable e indicaciones son opcionales. Una actividad existente tiene «Editar actividad y detalles». Las ediciones conservan interesados y verifican revisión para evitar sobrescribir cambios ajenos. Las actividades antiguas mantienen sus datos y muestran «Por confirmar» en campos aún no completados: no se inventan tareas, fechas ni responsables.
+
+Si el reporte deja de ser público, su actividad tampoco se lista públicamente ni recibe nuevos intereses. Todo cambio administrativo sigue limitado a la ciudad de la cuenta.
+
+## Gestión individual y modal estable (v11.4)
+
+- El detalle de una incidencia bloquea el scroll de la página de fondo y usa un desplazamiento interno propio, tanto en escritorio como en móvil.
+- Se eliminaron los checkboxes y la edición masiva del listado administrativo porque la gestión se realiza ticket por ticket.
+- El refresco automático del panel continúa funcionando cada 10 segundos sin depender de selecciones múltiples.

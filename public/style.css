@@ -49,3 +49,15 @@ dialog.map-dialog .modal-body{padding:16px}
 
 .pagination{display:flex;justify-content:center;align-items:center;gap:16px;margin:20px 0}
 @media print{.pagination{display:none}}
+
+.incident-location{padding:16px;margin:16px 0;border:1px solid currentColor;border-radius:12px}.incident-location h3{margin-top:0}.incident-location p{margin:8px 0}#incident-detail-map{height:300px;min-height:240px;border-radius:10px;margin:12px 0}#incident-map-section[hidden]{display:none}@media(max-width:600px){#incident-detail-map{height:260px}}
+
+.activity-text{white-space:pre-wrap;overflow-wrap:anywhere}.activity-preview{white-space:pre-wrap;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}.opportunity-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}.community-event-details{padding:12px;border:1px solid currentColor;border-radius:10px}#community-action-form{display:grid;gap:14px;margin-top:18px}
+
+/* v11.4 — modal de gestión aislado del scroll de fondo */
+body.modal-open{position:fixed;left:0;right:0;width:100%;overflow:hidden}
+dialog[open]{display:flex;flex-direction:column;overflow:hidden;max-height:90dvh}
+dialog[open] #modal-content{display:flex;flex-direction:column;min-height:0;max-height:90dvh;width:100%}
+dialog[open] .modal-head{flex:0 0 auto}
+dialog[open] .modal-body{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+@media(max-width:720px){dialog[open]{max-height:94dvh}dialog[open] #modal-content{max-height:94dvh}}
