@@ -179,3 +179,7 @@ Si el reporte deja de ser público, su actividad tampoco se lista públicamente 
 - El detalle de una incidencia bloquea el scroll de la página de fondo y usa un desplazamiento interno propio, tanto en escritorio como en móvil.
 - Se eliminaron los checkboxes y la edición masiva del listado administrativo porque la gestión se realiza ticket por ticket.
 - El refresco automático del panel continúa funcionando cada 10 segundos sin depender de selecciones múltiples.
+
+## Cambio v11.5: mapa sin incidencias resueltas
+
+Las incidencias con estado **Resuelto** se conservan en la base de datos, el historial ciudadano y el panel administrativo, pero ya no se dibujan como marcadores en el mapa público. Esto reduce la contaminación visual sin perder trazabilidad.
