@@ -27,3 +27,14 @@
 .gps-status.error{border-color:#b54747;background:rgba(181,71,71,.12)}
 .gps-status.success{border-color:#2f8f6b;background:rgba(47,143,107,.12)}
 .gps-status button{margin-top:.65rem}
+
+/* v10.7: mapa ciudadano como vista previa + explorador ampliado */
+.map-preview-wrap{position:relative;overflow:hidden}
+.map-preview-wrap #city-map{pointer-events:none}
+.map-explore-button{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);z-index:500;box-shadow:0 8px 24px #173c3335;white-space:nowrap}
+dialog.map-dialog{width:min(1100px,96vw)}
+dialog.map-dialog .modal-body{padding:16px}
+.expanded-map{height:min(72dvh,720px);min-height:430px;border-radius:10px;background:#e8efe9}
+.expanded-map-help{margin:0 0 12px}
+@media(max-width:720px){.map-explore-button{bottom:14px;min-height:46px}.expanded-map{height:68dvh;min-height:360px}dialog.map-dialog{width:96vw;max-height:96dvh}dialog.map-dialog .modal-head{padding:14px 16px}dialog.map-dialog .modal-body{padding:12px}}
+:root[data-theme="dark"] .expanded-map{background:#26332d}
